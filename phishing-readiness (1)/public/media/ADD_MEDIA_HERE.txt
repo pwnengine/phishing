@@ -1,0 +1,6 @@
+Copy the supplied skeleton-twerking.gif here and rename it reveal.gif.
+Copy the supplied Subtronics MP3 here and rename it reveal.mp3.
+Both files must exist before any selected recipient gets the media reveal.
+In /admin load results, select GIF + music for specific recipients, and set
+Music start (seconds) to the timestamp of the bass drop. Default is 0 seconds.
+Playback stops automatically after 15 seconds and has a visible stop button.

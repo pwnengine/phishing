@@ -1,0 +1,28 @@
+const key=document.querySelector('#key'),status=document.querySelector('#status');let active=true;
+async function api(path,body){const r=await fetch('/api/admin/'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+key.value,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});if(!r.ok)throw Error('Request failed ('+r.status+'). Check the admin key and input.');return r.json();}
+function show(data){active=data.active;document.querySelector('#toggle').textContent=active?'Pause campaign':'Resume campaign';document.querySelector('#media-status').textContent=data.mediaReady?'GIF and MP3 installed.':'Media not installed: copy reveal.gif and reveal.mp3 into public/media. Selected recipients will see the regular training message until both files exist.';document.querySelector('#cue').value=data.mediaStartSeconds||0;const rows=document.querySelector('#rows');rows.replaceChildren();for(const r of data.recipients){const tr=document.createElement('tr');const td=document.createElement('td');const p=document.createElement('div');p.textContent=r.email;td.append(p);const a=document.createElement('a');a.href=r.url;a.textContent=r.url;a.rel='noreferrer';td.append(a);tr.append(td);const choice=document.createElement('td'),label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=r.mediaEnabled===true;check.setAttribute('aria-label','Play GIF and music for '+r.email);check.onchange=()=>run(async()=>{check.disabled=true;try{show(await api('media',{email:r.email,enabled:check.checked}));}catch(e){check.checked=!check.checked;throw e;}finally{check.disabled=false;}});label.append(check);choice.append(label);tr.append(choice);for(const v of [r.expires,r.visits,r.submissions,r.accountFilled,r.passwordFilled,r.lastEvent||'—']){const cell=document.createElement('td');cell.textContent=v;tr.append(cell);}rows.append(tr);}status.textContent=(active?'Campaign active. ':'Campaign paused. ')+data.recipients.length+' recipients.';}
+async function run(fn){try{await fn();}catch(e){status.textContent=e.message;}}
+document.querySelector('#save-cue').onclick=()=>run(async()=>show(await api('media-settings',{startSeconds:Number(document.querySelector('#cue').value)})));
+document.querySelector('#load').onclick=()=>run(async()=>show(await api('results')));
+document.querySelector('#create').onclick=()=>run(async()=>{show(await api('recipients',{emails:document.querySelector('#emails').value.split(/\r?\n/).map(s=>s.trim().toLowerCase()).filter(Boolean).map(s=>s.includes('@')?s:s+'@nyecc.org')}));document.querySelector('#emails').value='';});
+document.querySelector('#toggle').onclick=()=>run(async()=>show(await api('state',{active:!active})));
+document.querySelector('#export').onclick=()=>run(async()=>{const data=await api('results');const fields=['email','url','expires','visits','submissions','accountFilled','passwordFilled','lastEvent'];const quote=v=>'"'+String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"';const csv=[fields,...data.recipients.map(r=>fields.map(f=>r[f]))].map(row=>row.map(quote).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='campaign-results.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+document.querySelector('#slide').onclick=()=>run(async()=>{
+ const data=await api('results');show(data);
+ const total=data.recipients.length;
+ if(!total)throw Error('Add recipients before generating a report.');
+ const metrics=[['Link visited',data.recipients.filter(r=>r.visits>0).length],['Form submitted',data.recipients.filter(r=>r.submissions>0).length],['Account field filled',data.recipients.filter(r=>r.accountFilled>0).length],['Password field filled',data.recipients.filter(r=>r.passwordFilled>0).length]];
+ const canvas=document.createElement('canvas');canvas.width=1920;canvas.height=1080;
+ const c=canvas.getContext('2d');c.fillStyle='#101d33';c.fillRect(0,0,1920,1080);
+ function text(value,x,y,size=28,color='#ffffff',weight='400'){c.font=weight+' '+size+'px Arial';c.fillStyle=color;c.fillText(value,x,y);}
+ text('NYECC  /  PHISHING READINESS',90,95,26,'#8fb9ff','700');
+ text('Campaign interaction snapshot',90,180,62,'#ffffff','700');
+ text(total+' enrolled recipients · '+new Date().toISOString().slice(0,16).replace('T',' ')+' UTC',90,240,28,'#bdcce0');
+ metrics.forEach(([label,count],i)=>{const y=350+i*137;const percent=100*count/total;text(label,90,y,30);c.fillStyle='#263a56';c.fillRect(510,y-28,1000,44);c.fillStyle=['#68a3ff','#55cfca','#f4c775','#ed9bab'][i];c.fillRect(510,y-28,1000*count/total,44);text(count+' / '+total+'  ('+percent.toFixed(1)+'%)',1550,y+4,30,'#ffffff','700');});
+ text('Each measure counts unique recipient links, not total events. Denominator: enrolled recipients.',90,910,25,'#bdcce0');
+ text('Visits may include scanners; forwarded or edited email links can misattribute activity.',90,952,25,'#bdcce0');
+ text('Field presence is measured at submission only. No entered account text or passwords were collected.',90,994,25,'#bdcce0');
+ const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw Error('Image generation failed.');
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='nyecc-phishing-summary-'+new Date().toISOString().slice(0,10)+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ status.textContent='Slide image generated (1920 × 1080). In PowerPoint choose Insert > Pictures. Use Export CSV for individual results.';
+});

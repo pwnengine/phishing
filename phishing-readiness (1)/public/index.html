@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="referrer" content="no-referrer"><title>Sign in to your account</title>
+ <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/signin.css">
+</head>
+<body class="signin-page">
+ <main class="signin-shell">
+  <section class="signin-card" aria-label="Account sign in">
+   <div class="brand" aria-label="Microsoft"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Microsoft</span></div>
+   <div id="panel">
+    <h1>Sign in</h1>
+    <p class="signin-intro">Use your work or school account to continue.</p>
+    <form id="access" autocomplete="off">
+     <label for="account">Email, phone, or username</label>
+     <input id="account" type="text" placeholder="Email, phone, or username" autocomplete="off" autocapitalize="none" spellcheck="false">
+     <label for="secret">Password</label>
+     <input id="secret" type="password" placeholder="Password" autocomplete="new-password">
+     <div class="signin-actions"><button id="submit" type="submit" disabled>Sign in</button></div>
+    </form>
+    <p id="status" role="status" class="muted">Checking sign-in link…</p>
+   </div>
+  </section>
+  <p class="signin-caption">Work or school account</p>
+ </main>
+ <script src="/participant.js" defer></script>
+</body>
+</html>
